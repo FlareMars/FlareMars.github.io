@@ -1,0 +1,231 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>EmscriptenWithGL</title>
+  </head>
+  <body>
+    <video id="video" style="width: 640px;height: 480px;display: none;" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    <input type="range" min="0" max="100" value="0" step="1" oninput="onSliderValueChanged(this.value)" style="width: 640px;"/>
+    <script  id="drawImage-vertex-shader" type="x-shader/x-vertex">
+        attribute vec4 a_position;
+        attribute vec2 a_texcoord;
+        
+        varying vec2 v_texcoord;
+        
+        void main() {
+          gl_Position = a_position;
+          v_texcoord = a_texcoord;
+        }
+    </script>
+    <script  id="drawImage-fragment-shader" type="x-shader/x-fragment">
+      precision mediump float;
+      
+      varying vec2 v_texcoord;
+      
+      uniform sampler2D u_texture;
+      
+      void main() {
+        gl_FragColor = texture2D(u_texture, v_texcoord);
+      }
+    </script>
+
+    <!-- <script type="module">
+      import { BeautykitRenderWrapper } from "./BeautykitRenderWrapper.js"
+    </script> -->
+
+    <script>
+      function onSliderValueChanged(newValue) {
+        console.log("colorAdjustEffect.setEffectIntensity(BKColorAdjustTypeHue,", newValue * 1.0 / 100.0, ");")
+        colorAdjustEffect.setEffectIntensity(1, newValue * 1.0 / 100.0)
+      }
+
+      var v;
+      var gl;
+      var baseTextureName;
+      var baseTexture;
+      var displayProgram;
+      var positionLocation;
+      var texcoordLocation;
+      var textureLocation;
+      var positionBuffer;
+      var texcoordBuffer;
+      var renderWrapper;
+      var colorAdjustEffect;
+
+      // 老的浏览器可能根本没有实现 mediaDevices，所以我们可以先设置一个空的对象
+      if (navigator.mediaDevices === undefined) {
+          navigator.mediaDevices = {};
+      }
+      if (navigator.mediaDevices.getUserMedia === undefined) {
+          navigator.mediaDevices.getUserMedia = function (constraints) {
+              // 首先，如果有getUserMedia的话，就获得它
+              var getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+
+              // 一些浏览器根本没实现它 - 那么就返回一个error到promise的reject来保持一个统一的接口
+              if (!getUserMedia) {
+                  return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+              }
+
+              // 否则，为老的navigator.getUserMedia方法包裹一个Promise
+              return new Promise(function (resolve, reject) {
+                  getUserMedia.call(navigator, constraints, resolve, reject);
+              });
+          }
+      }
+
+      var running = true;
+      function renderLoop() {
+        gl.bindTexture(gl.TEXTURE_2D, baseTexture);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, v);
+        const bkTexture = renderWrapper.render(baseTextureName);
+
+        let canvasWidth = gl.canvas.width;
+        let canvasHeight = gl.canvas.height;
+        gl.viewport(0, 0, canvasWidth, canvasHeight);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, bkTexture);
+        gl.useProgram(displayProgram);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+        gl.enableVertexAttribArray(texcoordLocation);
+        gl.vertexAttribPointer(texcoordLocation, 2, gl.FLOAT, false, 0, 0);
+        gl.uniform1i(textureLocation, 0);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+        gl.disableVertexAttribArray(positionLocation);
+        gl.disableVertexAttribArray(texcoordLocation);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        window.requestAnimationFrame(function(currentTime) {
+          if (running) renderLoop();
+        });
+      }
+
+      Beautykit = {};
+      Beautykit.onRuntimeInitialized = function() {
+        const constraints = {
+            video: true,
+            audio: false
+        };
+        let videoPlaying = false;
+        v = document.getElementById('video');
+        let promise = navigator.mediaDevices.getUserMedia(constraints);
+        promise.then(stream => {
+            // 旧的浏览器可能没有srcObject
+            if ("srcObject" in v) {
+                v.srcObject = stream;
+            } else {
+                // 防止再新的浏览器里使用它，应为它已经不再支持了
+                v.src = window.URL.createObjectURL(stream);
+            }
+            v.onloadedmetadata = function (e) {
+                v.play();
+                videoPlaying = true;
+
+                var canvas = document.getElementById('canvas');
+                canvas.width = v.videoWidth;
+                canvas.height = v.videoHeight;
+                gl = canvas.getContext('webgl2');
+
+                canvas.ondragover = event => {
+                  event.preventDefault();
+                }
+
+                canvas.ondrop = event => {
+                  let items = event.dataTransfer.items;
+                  event.preventDefault();
+                  for (let i=0; i<items.length; i++) {
+                      let item = items[i].webkitGetAsEntry();
+                      if (item) {
+                        renderWrapper.storeFiles(item).then(res => {
+                          console.log("renderWrapper.applyEffect(", res, ")")
+                          renderWrapper.applyEffect(res, "_InnerGroup")
+                        });
+                        break;
+                      }
+                  }
+                }
+
+                renderWrapper = new BeautykitRenderWrapper('canvas');
+                colorAdjustEffect = renderWrapper.createColorFilterAdjustEffect("__InnerGroup");
+
+                baseTextureName = renderWrapper.genNativeTexture();
+                baseTexture = gl.getParameter(gl.TEXTURE_BINDING_2D);
+                gl.bindTexture(gl.TEXTURE_2D, baseTexture);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, v);
+                gl.bindTexture(gl.TEXTURE_2D, null);
+
+                displayProgram = createProgramFromScripts(gl, ["drawImage-vertex-shader", "drawImage-fragment-shader"])
+
+                // look up where the vertex data needs to go.
+                positionLocation = gl.getAttribLocation(displayProgram, "a_position");
+                texcoordLocation = gl.getAttribLocation(displayProgram, "a_texcoord");
+
+                // lookup uniforms
+                textureLocation = gl.getUniformLocation(displayProgram, "u_texture");
+
+                // Create a buffer.
+                positionBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+                // Put a unit quad in the buffer
+                var positions = [
+                  -1.0, 1.0,
+                  -1.0, -1.0,
+                  1.0, 1.0,
+                  1.0, 1.0,
+                  -1.0, -1.0,
+                  1.0, -1.0,
+                ];
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+                // Create a buffer for texture coords
+                texcoordBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+
+                // Put texcoords in the buffer
+                var texcoords = [
+                  0, 0,
+                  0, 1,
+                  1, 0,
+                  1, 0,
+                  0, 1,
+                  1, 1,
+                ];
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
+                gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+                renderLoop();
+            };
+            
+        }).catch(err => {
+            console.error(err.name + ": " + err.message);
+        })
+      }
+
+      window.onbeforeunload = () => {
+        gl.deleteTexture(baseTexture);
+        gl.deleteBuffer(positionBuffer);
+        gl.deleteBuffer(texcoordBuffer);
+        gl.deleteProgram(displayProgram);
+        renderWrapper.release();
+      }
+    </script>
+    <script src="webgl-helper.js"></script>
+    <script src="protobuf.min.js"></script>
+    <script src="BeautykitRenderWrapper.js"></script>
+    <script src="beautykitweb.js"></script>
+  </body>
+</html>

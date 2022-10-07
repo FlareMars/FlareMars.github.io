@@ -1,0 +1,25 @@
+syntax = "proto2";
+
+package huyabk;
+option java_package = "com.huya.beautykit";
+
+option optimize_for = LITE_RUNTIME;
+
+message PBBKMat4x4 {
+  required float m00 = 1;
+  required float m01 = 2;
+  required float m02 = 3;
+  required float m03 = 4;
+  required float m10 = 5;
+  required float m11 = 6;
+  required float m12 = 7;
+  required float m13 = 8;
+  required float m20 = 9;
+  required float m21 = 10;
+  required float m22 = 11;
+  required float m23 = 12;
+  required float m30 = 13;
+  required float m31 = 14;
+  required float m32 = 15;
+  required float m33 = 16;
+}

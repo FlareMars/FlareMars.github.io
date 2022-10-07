@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package huyabk;
+option java_package = "com.huya.beautykit";
+
+option optimize_for = LITE_RUNTIME;
+
+message PBBoundingBox {
+  required float minX = 1;
+  required float minY = 2;
+  required float minZ = 3;
+  required float maxX = 4;
+  required float maxY = 5;
+  required float maxZ = 6;
+}

@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package huyabk;
+option java_package = "com.huya.beautykit";
+
+option optimize_for = LITE_RUNTIME;
+
+message PBBKRotatedRectangle {
+  required float centerX = 1;
+  required float centerY = 2;
+  required sfixed32 zIndex = 3;
+  required float width = 4;
+  required float height = 5;
+  required float degree = 6;
+}

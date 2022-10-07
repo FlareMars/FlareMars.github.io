@@ -1,0 +1,13 @@
+syntax = "proto2";
+
+package huyabk;
+option java_package = "com.huya.beautykit";
+
+option optimize_for = LITE_RUNTIME;
+
+message PBBKRectF {
+  required float left = 1;
+  required float top = 2;
+  required float width = 3;
+  required float height = 4;
+}

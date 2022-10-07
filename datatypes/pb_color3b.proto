@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package huyabk;
+option java_package = "com.huya.beautykit";
+
+option optimize_for = LITE_RUNTIME;
+
+message PBColor3B {
+  required int32 r = 1;
+  required int32 g = 2;
+  required int32 b = 3;
+}

@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package huyabk;
+option java_package = "com.huya.beautykit";
+
+option optimize_for = LITE_RUNTIME;
+
+message PBBKCorners {
+  required float leftTopX = 1;
+  required float leftTopY = 2;
+  required float rightTopX = 3;
+  required float rightTopY = 4;
+  required float leftBottomX = 5;
+  required float leftBottomY = 6;
+  required float rightBottomX = 7;
+  required float rightBottomY = 8;
+}

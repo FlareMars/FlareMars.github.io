@@ -1,0 +1,13 @@
+syntax = "proto2";
+
+package huyabk;
+option java_package = "com.huya.beautykit";
+
+option optimize_for = LITE_RUNTIME;
+
+message PBPlane {
+  required float normalX = 1;
+  required float normalY = 2;
+  required float normalZ = 3;
+  required float distance = 4;
+}

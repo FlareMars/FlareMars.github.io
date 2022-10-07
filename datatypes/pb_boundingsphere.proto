@@ -1,0 +1,13 @@
+syntax = "proto2";
+
+package huyabk;
+option java_package = "com.huya.beautykit";
+
+option optimize_for = LITE_RUNTIME;
+
+message PBBoundingSphere {
+  required float centerX = 1;
+  required float centerY = 2;
+  required float centerZ = 3;
+  required float radius = 4;
+}

@@ -1,0 +1,494 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>EmscriptenWithGL</title>
+</head>
+
+<body onload="load()">
+  <canvas id="canvas"></canvas>
+  <button type="button" id="btn_load" onclick="btnLoadAction()">测试默认</button>
+  <button type="button" id="btn_loadO" onclick="btnLoadActionOther()">测试自定义</button>
+  <button type="button" id="btn_loadPng" onclick="btnLoadPngAction()">加载png</button>
+  <button type="button" id="btn_Clear" onclick="btnClearAction()">清除png</button>
+  <button type="button" id="btn_ZoomIn" onclick="btnZoomIn()">放大</button>
+  <button type="button" id="btn_ZoomOut" onclick="btnZoomOut()">缩小</button>
+  <script id="drawImage-vertex-shader" type="x-shader/x-vertex">
+        attribute vec4 a_position;
+        attribute vec2 a_texcoord;
+        
+        varying vec2 v_texcoord;
+        
+        void main() {
+          gl_Position = a_position;
+          v_texcoord = a_texcoord;
+        }
+    </script>
+  <script id="drawImage-fragment-shader" type="x-shader/x-fragment">
+      precision mediump float;
+      
+      varying vec2 v_texcoord;
+      
+      uniform sampler2D u_texture;
+      
+      void main() {
+        gl_FragColor = texture2D(u_texture, v_texcoord);
+      }
+    </script>
+
+  <script type="text/javascript">
+
+    function load() {
+      console.log(window.innerWidth, window.innerHeight)
+    }
+
+    var gl;
+    var baseImg = new Image();
+    var baseTextureName;
+    var baseTexture;
+    var displayProgram;
+    var positionLocation;
+    var texcoordLocation;
+    var textureLocation;
+    var positionBuffer;
+    var texcoordBuffer;
+    var renderWrapper;
+    var customCollectionEffect;
+    var running = false;
+    var spriteCreate = false;
+    var sprite;
+    var Beautykit;
+    // var canvasWidth = 1280;
+    // var canvasHeight = 720;
+    const FPS = 30; // 设置帧率
+    const singleFrameTime = (1000 / FPS);
+    var lastTimeStampBeforeRender = 0;
+    var timeForward = 0; // 帧补充时间，如果有一帧耗时过长，后面连续多渲染几帧
+    function renderLoop(timeStamp) {
+      let doRender = true;
+      let timeDelta = timeStamp - lastTimeStampBeforeRender;
+
+      if (timeDelta > singleFrameTime) {
+        timeForward += (timeDelta - singleFrameTime);
+        if (timeForward > 1000) timeForward = 0;
+      }
+      else {
+        let timeOff = singleFrameTime - timeDelta;
+        if (timeForward > timeOff) {
+          timeForward -= timeOff;
+          doRender = true;
+        }
+        else {
+          doRender = false;
+        }
+      }
+
+      if (doRender) {
+        lastTimeStampBeforeRender = timeStamp;
+        let canvasWidth = gl.canvas.width;
+        let canvasHeight = gl.canvas.height;
+
+        // 由于canvas大小不一定是像素大小，所以需要按照实际像素大小传给renderwrapper进行渲染
+        renderWrapper.setTextureSize(canvasWidth * window.devicePixelRatio, canvasHeight * window.devicePixelRatio);
+        //renderWrapper.setTextureSize(canvasWidth, canvasHeight);
+        const bkTexture = renderWrapper.render(baseTextureName);
+
+        gl.viewport(0, 0, canvasWidth, canvasHeight);
+        gl.clearColor(0.0, 1.0, 0.0, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, bkTexture);
+        gl.useProgram(displayProgram);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+        gl.enableVertexAttribArray(texcoordLocation);
+        gl.vertexAttribPointer(texcoordLocation, 2, gl.FLOAT, false, 0, 0);
+        gl.uniform1i(textureLocation, 0);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+        gl.disableVertexAttribArray(positionLocation);
+        gl.disableVertexAttribArray(texcoordLocation);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+      }
+
+      window.requestAnimationFrame(function (currentTime) {
+        if (running) renderLoop(currentTime);
+      });
+    }
+
+    function restartRenderLoop() {
+      running = true;
+      renderLoop();
+    }
+
+    function beginScriptEdit() {
+      running = false;
+    }
+
+    function endScriptEdit() {
+      running = true;
+      renderLoop();
+    }
+
+    function stopRenderLoop() {
+      running = false;
+    }
+
+    function measureTextBounds(text, font, fontColor, hAligh, vAlign, strokeSize, strokeColor, shadowBlur, shadowColor, shadowOffsetX, shadowOffsetY, maxWidth, breakLines) {
+      var canvas = document.createElement('canvas');
+      // if (cvWidth > 0 && cvHeight > 0) {
+      //     canvas.width = cvWidth;
+      //     canvas.height = cvHeight;
+      // }
+
+      //canvas.style.display='none';
+      //canvas.setAttribute('id', '');
+      //document.body.appendChild(script);
+      // var canavs = document.getElementById("imgId");
+      // var parant = canavs.parentNode;
+      // canavs.removeChild(canavs);
+
+      var ctx = canvas.getContext('2d');
+
+      ctx.font = font;
+      ctx.fillStyle = fontColor;
+      ctx.textAlign = hAligh;
+      ctx.textBaseline = vAlign;
+      if (strokeSize > 0) {
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = strokeSize;
+      }
+      if (shadowBlur > 0) {
+        ctx.shadowColor = shadowColor;
+        ctx.shadowOffsetX = shadowOffsetX;
+        ctx.shadowOffsetY = shadowOffsetY;
+        ctx.shadowBlur = shadowBlur;
+      }
+
+      var metrics = ctx.measureText(text);
+      var rcHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent + 2;
+      var rcWidth = metrics.width;
+      var lineHeight = 0;
+      if (maxWidth > 0 && rcWidth > maxWidth) {
+        rcWidth = 0;
+        rcHeight = 0;
+        // 字符分隔为数组
+        var arrText = text.split('');
+        var line = '';
+        for (var n = 0; n < arrText.length; n++) {
+          var testLine = line + arrText[n];
+          var metrics = ctx.measureText(testLine);
+          lineHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent + 2;
+          var testWidth = metrics.width;
+          if (testWidth > maxWidth && n > 0) {
+            if (line.length > 1) {
+              rcHeight += lineHeight;
+            }
+            line = arrText[n];
+            if (!breakLines) {
+              break;
+            }
+          } else {
+            line = testLine;
+            if (testWidth > rcWidth) rcWidth = testWidth;
+          }
+        }
+        if (line.length > 1) {
+          rcHeight += lineHeight;
+        }
+      }
+
+      var rcStr = rcWidth + "," + rcHeight;
+      return rcStr;
+    }
+
+
+
+    function drawText(x, y, text, font, fontColor, hAligh, vAlign, strokeSize, strokeColor, shadowBlur, shadowColor, shadowOffsetX, shadowOffsetY, cvWidth, cvHeight, maxWidth, breakLines) {
+      var canvas = document.createElement('canvas');
+      if (cvWidth > 0 && cvHeight > 0) {
+        canvas.width = cvWidth;
+        canvas.height = cvHeight;
+      }
+
+      //canvas.style.display='none';
+      //canvas.setAttribute('id', '');
+      //document.body.appendChild(script);
+      // var canavs = document.getElementById("imgId");
+      // var parant = canavs.parentNode;
+      // canavs.removeChild(canavs);
+
+      var ctx = canvas.getContext('2d');
+
+      ctx.font = font;
+      ctx.fillStyle = fontColor;
+      ctx.textAlign = hAligh;
+      ctx.textBaseline = vAlign;
+      if (strokeSize > 0) {
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = strokeSize;
+      }
+      if (shadowBlur > 0) {
+        ctx.shadowColor = shadowColor;
+        ctx.shadowOffsetX = shadowOffsetX;
+        ctx.shadowOffsetY = shadowOffsetY;
+        ctx.shadowBlur = shadowBlur;
+      }
+
+      var metrics = ctx.measureText(text);
+      var rcWidth = metrics.width;
+      if (maxWidth > 0 && rcWidth > maxWidth) {
+        // 字符分隔为数组
+        var arrText = text.split('');
+        var line = '';
+        for (var n = 0; n < arrText.length; n++) {
+          var testLine = line + arrText[n];
+          var metrics = ctx.measureText(testLine);
+          lineHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent + 2;
+          var testWidth = metrics.width;
+          if (testWidth > maxWidth && n > 0) {
+            if (line.length > 1) {
+              ctx.fillText(line, x, y);
+              y += lineHeight;
+            }
+            line = arrText[n];
+            if (!breakLines) {
+              break;
+            }
+          } else {
+            line = testLine;
+          }
+        }
+
+        if (line.length > 1) {
+          ctx.fillText(line, x, y);
+        }
+      }
+      else {
+        ctx.fillText(text, x, y);
+      }
+
+      var url = canvas.toDataURL();
+      var newImg = document.createElement("img");
+      newImg.src = url;
+      document.body.appendChild(newImg);
+
+      var lengthBytes = lengthBytesUTF8(url) + 1;
+      var stringOnWasmHeap = _malloc(lengthBytes);
+      stringToUTF8(url, stringOnWasmHeap, lengthBytes);
+      return stringOnWasmHeap;
+    }
+
+    baseImg.addEventListener('load', function () {
+      var canvas = document.getElementById('canvas');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      // console.log(canvas.width, canvas.height, window.devicePixelRatio)
+      //canvas.width = canvasWidth;
+      //canvas.height = canvasHeight;
+
+      // resizeCanvasToDisplaySize(canvas, 1.0 / window.devicePixelRatio);
+      gl = canvas.getContext('webgl2', { antialias: false });
+      if (!gl.getExtension('EXT_color_buffer_float'))
+        throw new Error('Rendering to floating point textures is not supported on this platform');
+
+      canvas.ondragover = event => {
+        event.preventDefault();
+      }
+
+      canvas.ondrop = event => {
+        let items = event.dataTransfer.items;
+        event.preventDefault();
+        for (let i = 0; i < items.length; i++) {
+          let item = items[i].webkitGetAsEntry();
+          if (item) {
+            renderWrapper.storeFiles(item).then(res => {
+              renderWrapper.applyEffect(res, "_InnerGroup")
+            });
+            running = true;
+            break;
+          }
+        }
+        renderLoop();
+      }
+      canvas.addEventListener("mousedown", function (event) {
+        renderWrapper.onMouseDown(event);
+      });
+      canvas.addEventListener("mousemove", function (event) {
+        renderWrapper.onMouseMove(event);
+      });
+      canvas.addEventListener("mouseup", function (event) {
+        renderWrapper.onMouseUp(event);
+      });
+      canvas.addEventListener("keydown", function (event) {
+        renderWrapper.onKeyDown(event);
+      });
+      canvas.addEventListener("keyup", function (event) {
+        renderWrapper.onKeyUp(event);
+      });
+
+      renderWrapper = new BeautykitRenderWrapper('canvas');
+
+      baseTextureName = renderWrapper.genNativeTexture();
+      //baseTexture = gl.createTexture();
+      baseTexture = gl.getParameter(gl.TEXTURE_BINDING_2D);
+      gl.bindTexture(gl.TEXTURE_2D, baseTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, baseImg);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+
+      displayProgram = createProgramFromScripts(gl, ["drawImage-vertex-shader", "drawImage-fragment-shader"])
+
+      // look up where the vertex data needs to go.
+      positionLocation = gl.getAttribLocation(displayProgram, "a_position");
+      texcoordLocation = gl.getAttribLocation(displayProgram, "a_texcoord");
+
+      // lookup uniforms
+      textureLocation = gl.getUniformLocation(displayProgram, "u_texture");
+
+      // Create a buffer.
+      positionBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+      // Put a unit quad in the buffer
+      var positions = [
+        -1.0, 1.0,
+        -1.0, -1.0,
+        1.0, 1.0,
+        1.0, 1.0,
+        -1.0, -1.0,
+        1.0, -1.0,
+      ];
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+      // Create a buffer for texture coords
+      texcoordBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+
+      // Put texcoords in the buffer
+      var texcoords = [
+        0, 0,
+        0, 1,
+        1, 0,
+        1, 0,
+        0, 1,
+        1, 1,
+      ];
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+      running = true;
+      renderLoop();
+    });
+
+    Beautykit = {};
+    Beautykit.onRuntimeInitialized = function () {
+      baseImg.src = './standard_model.jpg';
+    }
+
+    window.onbeforeunload = () => {
+      gl.deleteTexture(baseTexture);
+      gl.deleteBuffer(positionBuffer);
+      gl.deleteBuffer(texcoordBuffer);
+      gl.deleteProgram(displayProgram);
+      renderWrapper.release();
+    }
+
+    function cceEventListener(key, content, status) {
+      console.log('key:%s, content:%s, status:%d', key, content, status);
+    }
+
+    function btnLoadAction() {
+      fetch("http://localhost:8080/data/test.zip").then((response) => {
+        response.arrayBuffer().then((buffer) => {
+          loadZipEntryData(buffer);
+        });
+      });
+    }
+
+    function loadZipEntryData(zipBuffer) {
+      FS.mkdir("/data");
+      FS.writeFile('/data/test.zip', new Uint8Array(zipBuffer));
+      FS.mkdir("/data/test"); //解压缩内部会进行路径创建，这边可有可无
+      unZipFile("/data/test.zip", "/data/test");
+      customCollectionEffect = renderWrapper.createCustomCollectionEffect("virutal_actor");
+      customCollectionEffect.loadEffectConfig("/data/test");
+      customCollectionEffect.setScriptLogCallback(defaultBeautykitLogFunc);
+      customCollectionEffect.setEventListener("cceListener", cceEventListener); // (ley, func)
+    }
+
+    function btnLoadActionOther() {
+      fetch("http://localhost:8080/data/testUser.zip").then((response) => {
+        response.arrayBuffer().then((buffer) => {
+          FS.mkdir("/data");
+          FS.writeFile('/data/testUser.zip', new Uint8Array(buffer));
+          FS.mkdir("/data/test"); //解压缩内部会进行路径创建，这边可有可无
+          var res = unZipFile("/data/testUser.zip", "/data/test");
+          customCollectionEffect1 = renderWrapper.createCustomCollectionEffect("virutal_actor");
+          customCollectionEffect1.loadEffectConfig("/data/test/lua_virtualcenter");
+          customCollectionEffect1.setScriptLogCallback(defaultBeautykitLogFunc);
+          customCollectionEffect1.setEventListener("cceListener", cceEventListener); // (ley, func)
+        });
+      });
+    }
+
+    function btnLoadPngAction() {
+      fetch("http://localhost:8080/data/res/icon_guitar.png").then((response) => {
+        response.arrayBuffer().then((buffer) => {
+          //FS.mkdir("/data"); //已经存在的目录再次mkdir会报错，另外目录只能一级一级创建
+          FS.mkdir("/data/res");
+          FS.writeFile('/data/res/icon_guitar.png', new Uint8Array(buffer));
+
+          command = "{ \"code\": \"addSprite\", \"path\": \"/data/res/icon_guitar.png\"}";
+          customCollectionEffect.pushCommand(command);
+          //customCollectionEffect.pushCommand("local label = Sprite.create(\"/data/res/icon_guitar.png\")\nlabel:setPosition(Vector.new(400, 500))\naddchild(label)");
+          //sprite = Sprite.create("/data/res/icon_guitar.png");
+          //sprite.setPosition(new Vector2(500, 600));
+          //renderWrapper.addChild(sprite);
+        });
+      });
+    }
+
+    function btnClearAction() {
+      //renderWrapper.removeChild(sprite);
+      FS.unlink('/data/res/icon_guitar.png'); //deleteFile
+      FS.rmdir('/data/res'); // only delete dir which is empty?
+    }
+
+    function addZipEntryData(buff, size, namePtr, i, n) {
+      //const outArray = Module.HEAPU8.subarray(buff, buff + size);
+      const fileName = Module.UTF8ToString(namePtr);
+
+    }
+
+    function btnZoomIn() {
+      var canvas = document.getElementById('canvas');
+      canvas.width = canvas.width * 1.2;
+      canvas.height = canvas.height * 1.2;
+      renderLoop()
+    }
+
+    function btnZoomOut() {
+      var canvas = document.getElementById('canvas');
+      canvas.width = canvas.width * 0.8;
+      canvas.height = canvas.height * 0.8;
+      renderLoop()
+    }
+  </script>
+  <script src="webgl-helper.js"></script>
+  <!-- <script src="jszip.min.js"></script>
+    <script src="protobuf.min.js"></script> -->
+  <script src="BeautykitRenderWrapper.js"></script>
+  <!-- <script src="beautykitweb.js"></script> -->
+</body>
+
+</html>

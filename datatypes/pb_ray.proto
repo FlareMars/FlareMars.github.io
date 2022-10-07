@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package huyabk;
+option java_package = "com.huya.beautykit";
+
+option optimize_for = LITE_RUNTIME;
+
+message PBRay {
+  required float originX = 1;
+  required float originY = 2;
+  required float originZ = 3;
+  required float directionX = 4;
+  required float directionY = 5;
+  required float directionZ = 6;
+}
