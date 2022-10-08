@@ -2196,7 +2196,7 @@ const pb_bkmat4x4_load_promise = protobuf.load("datatypes/pb_bkmat4x4.proto");
 const pb_bksizef_load_promise = protobuf.load("datatypes/pb_bksizef.proto");
 
 Promise.all([pb_vector2_load_promise, pb_vector3_load_promise, pb_vector4_load_promise, pb_matrix_load_promise, pb_bkmat4x4_load_promise, pb_bksizef_load_promise]).then((roots) => {
-    window.PBVector2 = roots[0].lookupType("huyabk.PBVector2");
+    window.PBVector2 = roots[0].lookupType("pbbk.PBVector2");
     window.PBVector2.instance = PBVector2.create();
     var temp = PBVector2.encode(PBVector2.instance).finish();
     window.PBVector2.nativeBuffer = Module._malloc(temp.length);
@@ -2212,7 +2212,7 @@ Promise.all([pb_vector2_load_promise, pb_vector3_load_promise, pb_vector4_load_p
         Module._free(bufferMalloced);
     };
 
-    window.PBVector3 = roots[1].lookupType("huyabk.PBVector3");
+    window.PBVector3 = roots[1].lookupType("pbbk.PBVector3");
     window.PBVector3.instance = PBVector3.create();
     temp = PBVector3.encode(PBVector3.instance).finish();
     window.PBVector3.nativeBuffer = Module._malloc(temp.length);
@@ -2229,7 +2229,7 @@ Promise.all([pb_vector2_load_promise, pb_vector3_load_promise, pb_vector4_load_p
         Module._free(bufferMalloced);
     };
 
-    window.PBVector4 = roots[2].lookupType("huyabk.PBVector4");
+    window.PBVector4 = roots[2].lookupType("pbbk.PBVector4");
     window.PBVector4.instance = PBVector4.create();
     temp = PBVector4.encode(PBVector4.instance).finish();
     window.PBVector4.nativeBuffer = Module._malloc(temp.length);
@@ -2247,7 +2247,7 @@ Promise.all([pb_vector2_load_promise, pb_vector3_load_promise, pb_vector4_load_p
         Module._free(bufferMalloced);
     };
 
-    window.PBMatrix = roots[3].lookupType("huyabk.PBMatrix");
+    window.PBMatrix = roots[3].lookupType("pbbk.PBMatrix");
     window.PBMatrix.instance = PBMatrix.create();
     temp = PBMatrix.encode(PBMatrix.instance).finish();
     window.PBMatrix.nativeBuffer = Module._malloc(temp.length);
@@ -2277,7 +2277,7 @@ Promise.all([pb_vector2_load_promise, pb_vector3_load_promise, pb_vector4_load_p
         Module._free(bufferMalloced);
     };
 
-    window.PBBKMat4x4 = roots[4].lookupType("huyabk.PBBKMat4x4");
+    window.PBBKMat4x4 = roots[4].lookupType("pbbk.PBBKMat4x4");
     window.PBBKMat4x4.instance = PBBKMat4x4.create();
     temp = PBBKMat4x4.encode(PBBKMat4x4.instance).finish();
     window.PBBKMat4x4.nativeBuffer = Module._malloc(temp.length);
@@ -2307,7 +2307,7 @@ Promise.all([pb_vector2_load_promise, pb_vector3_load_promise, pb_vector4_load_p
         Module._free(bufferMalloced);
     };
 
-    window.PBBKSizeF = roots[5].lookupType("huyabk.PBBKSizeF");
+    window.PBBKSizeF = roots[5].lookupType("pbbk.PBBKSizeF");
     window.PBBKSizeF.instance = PBBKSizeF.create();
     var temp = PBBKSizeF.encode(PBBKSizeF.instance).finish();
     window.PBBKSizeF.nativeBuffer = Module._malloc(temp.length);
