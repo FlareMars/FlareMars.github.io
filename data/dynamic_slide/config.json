@@ -1,0 +1,26 @@
+{
+    "name": "openapi",
+    "version": {
+        "MinimumSupportVersion": "0",
+        "MaximumSupportVersion": "2147483647"
+    },
+    "type": 0,
+    "author": "",
+    "clearEffect": false,
+    "effects": [
+        {
+            "name": "customCollectionEffect",
+            "needTouchEvents": false,
+            "needFace": false,
+            "needFaceExtraPoints": false,
+            "needHand": false,
+            "needBody": false,
+            "needBackgroundSegment": false,
+            "needBlendShape": false,
+            "canvasDirection": -1,
+            "script": "game.lua",
+            "strict": "true",
+            "effects": []
+        }
+    ]
+}

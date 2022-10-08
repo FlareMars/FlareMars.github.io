@@ -6,14 +6,14 @@
   <title>EmscriptenWithGL</title>
 </head>
 
-<body onload="load()">
+<body onload="load()" style="color: #000000; margin: 0px;">
   <canvas id="canvas"></canvas>
-  <button type="button" id="btn_load" onclick="btnLoadAction()">测试默认</button>
+  <!-- <button type="button" id="btn_load" onclick="btnLoadAction()">测试默认</button>
   <button type="button" id="btn_loadO" onclick="btnLoadActionOther()">测试自定义</button>
   <button type="button" id="btn_loadPng" onclick="btnLoadPngAction()">加载png</button>
   <button type="button" id="btn_Clear" onclick="btnClearAction()">清除png</button>
   <button type="button" id="btn_ZoomIn" onclick="btnZoomIn()">放大</button>
-  <button type="button" id="btn_ZoomOut" onclick="btnZoomOut()">缩小</button>
+  <button type="button" id="btn_ZoomOut" onclick="btnZoomOut()">缩小</button> -->
   <script id="drawImage-vertex-shader" type="x-shader/x-vertex">
         attribute vec4 a_position;
         attribute vec2 a_texcoord;
@@ -388,6 +388,8 @@
 
       running = true;
       renderLoop();
+
+      btnLoadAction();
     });
 
     Beautykit = {};
@@ -408,7 +410,7 @@
     }
 
     function btnLoadAction() {
-      fetch("http://localhost:8080/data/test.zip").then((response) => {
+      fetch(window.location.origin + "/data/test.zip").then((response) => {
         response.arrayBuffer().then((buffer) => {
           loadZipEntryData(buffer);
         });
