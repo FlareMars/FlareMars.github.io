@@ -1,4 +1,3 @@
--- require("network_mgr")
 require('blessingmotor')
 
 ---脚本被加载时调用
@@ -13,14 +12,6 @@ function initialize(width, height, viewportX, viewportY, viewportWidth, viewport
     math.randomseed(os.time())
     __gWidth = width
     __gHeight = height
-    --虎牙正式环境
-    local roomId = 19078936
-    local appId = "f597f64cd0d052de"
-    local secret = "f566612ad92b65b16bbb4ae2d86d0a3d"
-    local domain = "ws://ws-apiext.huya.com/index.html?do=comm&"
-    -- _network = NetworkManager.new()
-    -- _network:initialize(roomId, appId, secret, domain)
-    -- _network:initializeWithRawUrl("ws://ws-apiext.huya.com/index.html?do=comm&roomId=19078936&appId=f597f64cd0d052de&iat=1665197546&exp=1665198146&sToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6ImY1OTdmNjRjZDBkMDUyZGUiLCJjcmVhdG9yIjoiREVWIiwiZXhwIjoxNjY1MTk4MTQ2LCJpYXQiOjE2NjUxOTc1NDZ9.jpk3H94iLvhrENGfl4uPxLmB6eonmKkhbti3wWoSaqE")
 
     _photoSpriteFrames = {}
     for index = 1, 9 do
@@ -79,8 +70,8 @@ function update(elapsedTime, timeSinceLastFrame, detectionInfo)
     end
 
     __gMotorGeneratorCooldown = __gMotorGeneratorCooldown - timeSinceLastFrame
-    if __gMotorCount < 5 and __gMotorGeneratorCooldown < 0 then
-        __gMotorGeneratorCooldown = 1000
+    if __gMotorCount < 8 and __gMotorGeneratorCooldown < 0 then
+        __gMotorGeneratorCooldown = 2000
         __gMotorCount = __gMotorCount + 1
         local motor = BlessingMotor.new()
         __gCanvas:addChild(motor)
